@@ -4,14 +4,31 @@ import * as mongoose from 'mongoose'
 import { Book } from './schemas/book.schema';
 import { CreateBookDto } from './dto/createBook.dto';
 import { UpdateBookDto } from './dto/updateBook.dto';
+import { Query } from 'express-serve-static-core'
 
 @Injectable()
 export class BookService {
   constructor(@InjectModel(Book.name) private bookModel: mongoose.Model<Book>) { }
 
   // Return the books array, which will be wrapped in a Promise because the function is async
-  async getAllBooks(): Promise<Book[]> {
-    const books = await this.bookModel.find()
+  async getAllBooks(query: Query): Promise<Book[]> {
+    const resultsPerPage = 5
+    const currentPage = Number(query.page) || 1
+    const skip = resultsPerPage * (currentPage - 1)
+    const keyword = query.keyword ?
+      {
+        title: {
+          $regex: query.keyword,
+          $options: 'i'
+        }
+      } :
+      {}
+
+    const books = await this.bookModel
+      .find({ ...keyword })
+      .skip(skip)
+      .limit(resultsPerPage)
+
     return books
   }
 
